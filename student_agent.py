@@ -145,40 +145,11 @@ class Agent(object):
     # ... existing code ...
 
     def act(self, observation):
-        self.steps_done += 1
         
-        # Handle different observation formats
-        # If observation is from FrameStack, it might be LazyFrames or have shape (4, 84, 84)
-        if hasattr(observation, '_frames'):  # LazyFrames from FrameStack
-            observation = np.array(observation)
-        
-        # Check the shape and reshape if needed
-        if len(observation.shape) == 3 and observation.shape[0] == 4:
-            # Already stacked frames with shape (4, 84, 84)
-            state = observation
-        elif len(observation.shape) == 4 and observation.shape[0] == 4:
-            # Stacked frames with extra dimension (4, 1, 84, 84)
-            state = observation.reshape(4, 84, 84)
-        else:
-            # Single frame or other format, use our frame buffer
-            if len(self.frame_buffer) == 0:
-                for _ in range(self.frame_stack):
-                    self.frame_buffer.append(observation)
-            else:
-                self.frame_buffer.append(observation)
-            state = np.array(self.frame_buffer)
-        
-        # Ensure state has shape [channels, height, width] for the network
-        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        
-        # Epsilon-greedy action selection
-        epsilon = self._get_epsilon()
-        if random.random() > epsilon:
-            with torch.no_grad():
-                q_values = self.policy_net(state_tensor)
-                action = q_values.max(1)[1].item()
-        else:
-            action = self.action_space.sample()
+        state_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            q_values = self.policy_net(state_tensor)
+            action = q_values.max(1)[1].item()
             
         return action
 
