@@ -6,8 +6,10 @@ import numpy as np
 import random
 from collections import deque
 import gym
+import cv2
+from gym.wrappers import FrameStack
 
-model_path = "best_mario_dueling_dqn.pth"
+model_path = 'mario_dueling_dqn.pth'
 
 # Preprocessing wrappers for Mario environment
 class SkipFrame(gym.Wrapper):
@@ -25,6 +27,27 @@ class SkipFrame(gym.Wrapper):
                 break
         return obs, total_reward, done, info
 
+class GrayScaleObservation(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        obs_shape = self.observation_space.shape[:2]
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def observation(self, observation):
+        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
+        return observation
+
+class ResizeObservation(gym.ObservationWrapper):
+    def __init__(self, env, shape):
+        super().__init__(env)
+        self.shape = (shape, shape) if isinstance(shape, int) else shape
+        obs_shape = self.shape + self.observation_space.shape[2:]
+        self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def observation(self, observation):
+        observation = cv2.resize(observation, self.shape, interpolation=cv2.INTER_AREA)
+        return observation
+
 class NormalizeObservation(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -32,6 +55,7 @@ class NormalizeObservation(gym.ObservationWrapper):
 
     def observation(self, observation):
         return np.array(observation).astype(np.float32) / 255.0
+
 
 # Dueling DQN Network
 class DuelingDQN(nn.Module):
@@ -126,12 +150,30 @@ class Agent(object):
             self.steps_done = self.epsilon_decay * 10  # Force epsilon to be at minimum
 
     def act(self, observation):
-
-        print(f"Current observation: {observation}")
-
-        observation = np.ascontiguousarray(observation)
-
-        state_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
+        # Check if observation needs preprocessing
+        if len(observation.shape) == 3 and observation.shape[2] == 3:  # RGB format
+            # Convert RGB to grayscale and resize to 84x84
+            gray = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
+            resized = cv2.resize(gray, (84, 84), interpolation=cv2.INTER_AREA)
+            normalized = resized / 255.0  # Normalize to 0-1
+            
+            # Update frame buffer
+            if len(self.frame_buffer) == 0:  # Initialize buffer if empty
+                for _ in range(self.frame_stack):
+                    self.frame_buffer.append(normalized)
+            else:
+                self.frame_buffer.append(normalized)
+                
+            # Stack frames
+            stacked_frames = np.stack(self.frame_buffer, axis=0)
+            state = stacked_frames
+        else:
+            # Assume observation is already preprocessed
+            state = observation
+        
+        print(f"Current state: {state}")
+        # Convert to tensor and get action
+        state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
             q_values = self.policy_net(state_tensor)
             action = q_values.max(1)[1].item()
