@@ -11,51 +11,6 @@ from gym.wrappers import FrameStack
 
 model_path = 'best_mario_dueling_dqn.pth'
 
-# Preprocessing wrappers for Mario environment
-class SkipFrame(gym.Wrapper):
-    def __init__(self, env, skip):
-        super().__init__(env)
-        self._skip = skip
-
-    def step(self, action):
-        total_reward = 0.0
-        done = False
-        for i in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
-            total_reward += reward
-            if done:
-                break
-        return obs, total_reward, done, info
-
-class GrayScaleObservation(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        obs_shape = self.observation_space.shape[:2]
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
-
-    def observation(self, observation):
-        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        return observation
-
-class ResizeObservation(gym.ObservationWrapper):
-    def __init__(self, env, shape):
-        super().__init__(env)
-        self.shape = (shape, shape) if isinstance(shape, int) else shape
-        obs_shape = self.shape + self.observation_space.shape[2:]
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
-
-    def observation(self, observation):
-        observation = cv2.resize(observation, self.shape, interpolation=cv2.INTER_AREA)
-        return observation
-
-class NormalizeObservation(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        self.observation_space = gym.spaces.Box(low=0, high=1.0, shape=self.observation_space.shape, dtype=np.float32)
-
-    def observation(self, observation):
-        return np.array(observation).astype(np.float32) / 255.0
-
 
 # Dueling DQN Network
 class DuelingDQN(nn.Module):
@@ -171,7 +126,7 @@ class Agent(object):
             # Assume observation is already preprocessed
             state = observation
         
-        print(f"Current state: {state}")
+        # print(f"Current state: {state}")
         # Convert to tensor and get action
         state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
