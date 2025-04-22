@@ -127,6 +127,8 @@ class Agent(object):
 
     def act(self, observation):
 
+        print(f"Current observation: {observation}")
+
         observation = np.ascontiguousarray(observation)
 
         state_tensor = torch.FloatTensor(observation).unsqueeze(0).to(self.device)
