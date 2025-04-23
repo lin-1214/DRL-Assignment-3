@@ -9,7 +9,7 @@ import gym
 import cv2
 from gym.wrappers import FrameStack
 
-model_path = 'best_mario_dueling_dqn.pth'
+model_path = 'mario_dueling_dqn.pth'
 
 
 # Dueling DQN Network
