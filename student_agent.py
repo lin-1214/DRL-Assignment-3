@@ -11,18 +11,15 @@ class Agent:
         self.skip_frame = RainbowDQNConfig.FRAME_SKIP
         self.skip_count = 0
         self.action = None
-        # Initialize the action space based on COMPLEX_MOVEMENT
         self.action_space = gym.spaces.Discrete(12)
         
         self.policy_net = RainbowDQN(input_channels=RainbowDQNConfig.FRAME_STACK, n_actions=self.action_space.n)
         self.policy_net.load_state_dict(torch.load(model_path, weights_only = True, map_location=self.device))
         self.policy_net.eval()
-        
-        # Frame processing
+
         self.frame_stack = frame_stack
         self.frames = deque(maxlen=frame_stack)
         self.start = True
-        # Image transformation pipeline
         self.transform = T.Compose([
             T.ToPILImage(),
             T.Grayscale(),

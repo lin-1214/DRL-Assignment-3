@@ -55,7 +55,7 @@ class FrameStack(gym.Wrapper):
         shape = env.observation_space.shape
         self.observation_space = gym.spaces.Box(
             0.0, 1.0, 
-            shape=(shape[0]*stack, shape[1], shape[2]), 
+            shape=(shape[0] * self.stack, shape[1], shape[2]), 
             dtype=np.float32
         )
         
@@ -141,11 +141,11 @@ class RainbowDQNConfig:
     BATCH_SIZE = 32         # Number of samples per training batch
     GAMMA = 0.9             # Discount factor for future rewards
     REPLAY_SIZE = 80000     # Size of experience replay buffer
-    LEARNING_RATE = 0.00025 # Learning rate for optimizer
+    LEARNING_RATE = 2.5e-4 # Learning rate for optimizer
     
     # Training schedule
     TOTAL_EPISODES = 10000  # Total number of episodes to train
-    MAX_TRAINING_FRAMES = 10000000  # Maximum frames for training
+    MAX_TRAINING_FRAMES = 5000000  # Maximum frames for training
     REPLAY_START_SIZE = 10000    # Collect this many experiences before training
     
     # Update frequencies
@@ -225,12 +225,12 @@ class RainbowDQN(nn.Module):
         
         # Compute value and advantage streams
         value = self.value_stream(features)
-        if self.debug:
-            print(f"Value stream shape: {value.shape}")
+        # if self.debug:
+        #     print(f"Value stream shape: {value.shape}")
             
         advantage = self.advantage_stream(features)
-        if self.debug:
-            print(f"Advantage stream shape: {advantage.shape}")
+        # if self.debug:
+        #     print(f"Advantage stream shape: {advantage.shape}")
         
         # Combine using dueling architecture formula
         # Q(s,a) = V(s) + (A(s,a) - mean(A(s,a')))
@@ -319,11 +319,11 @@ class PrioritizedReplayBuffer:
     def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001, epsilon=1e-6):
         self.tree = SumTree(capacity)
         self.capacity = capacity
-        self.alpha = alpha  # Priority exponent
-        self.beta = beta    # Importance-sampling exponent
+        self.alpha = alpha  
+        self.beta = beta   
         self.beta_increment = beta_increment
-        self.epsilon = epsilon  # Small constant to avoid zero priority
-        self.max_priority = 1.0  # Initial max priority
+        self.epsilon = epsilon 
+        self.max_priority = 1.0 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def push(self, state, action, reward, next_state, done, error=None):
@@ -372,7 +372,7 @@ class PrioritizedReplayBuffer:
         # Unpack the batch of experiences
         states, actions, rewards, next_states, dones = map(list, zip(*batch_data))
         
-        # Convert to tensors more robustly
+        # Convert to tensors robustly
         try:
             # For tensor states
             if torch.is_tensor(states[0]):
@@ -438,8 +438,8 @@ def obs_to_state(obs, debug=False):
     state = torch.from_numpy(state).float() / 255.0 
     state = state.unsqueeze(0)
     
-    if debug:
-        print(f"Processed state shape: {state.shape}")
+    # if debug:
+    #     print(f"Processed state shape: {state.shape}")
     
     return state
 
@@ -663,7 +663,7 @@ def train(config, weight=None):
             
             # Periodic saving
             if agent.frame_count % config.CHECKPOINT_FREQ == 0:
-                agent.save_model(config.MODEL_PATH, tag=f"_{agent.frame_count}")
+                # agent.save_model(config.MODEL_PATH, tag=f"_{agent.frame_count}")
                 # Also save a copy as the latest model
                 agent.save_model(config.MODEL_PATH, tag="latest")
             
