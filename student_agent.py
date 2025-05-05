@@ -32,16 +32,21 @@ class Agent:
         
         
 
-    def preprocess_frame(self, frame):
+    def obs_to_state(self, obs):
         """Convert raw frame to grayscale, resize, and normalize."""
-        processed = self.transform(frame)
+        processed = self.transform(obs)
         normalized = processed / 255
         return normalized
+    
+    # for local testing
+    # def initialize_frames(self):
+    #     for i in range(len(self.frames)):
+    #         self.frames[i] = torch.zeros((1, 84, 84))
     
     def act(self, observation):
         """Determine action based on current observation."""
         # Preprocess the observation
-        processed_frame = self.preprocess_frame(observation)
+        processed_frame = self.obs_to_state(observation)
         
         # Initialize frame stack if this is the first call
         if self.start:
@@ -62,13 +67,13 @@ class Agent:
             # Get action from model
             with torch.no_grad():
                 # Stack frames and prepare for model input
-                stacked_frames = torch.stack(list(self.frames), dim=0).unsqueeze(0).to(self.device)
+                state_tensor = torch.stack(list(self.frames), dim=0).unsqueeze(0).to(self.device)
                 # Model expects shape [batch, channels, height, width]
                 # But our stack is [stack_size, channels, height, width]
-                stacked_frames = stacked_frames.permute(0, 2, 1, 3, 4).squeeze(0)
+                state_tensor = state_tensor.permute(0, 2, 1, 3, 4).squeeze(0)
                 
                 # Get Q-values and select best action
-                q_values = self.policy_net(stacked_frames)
+                q_values = self.policy_net(state_tensor)
                 self.action = q_values.max(1)[1].item()
         
         return self.action
